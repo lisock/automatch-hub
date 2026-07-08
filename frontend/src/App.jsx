@@ -15,6 +15,7 @@ function App() {
   });
 
   const [recommendations, setRecommendations] = useState([]);
+  const [selectedCars, setSelectedCars] = useState([]);
   const [loading, setLoading] = useState(false);
 
   function handleChange(event) {
@@ -22,15 +23,17 @@ function App() {
 
     setFormData({
       ...formData,
-      [name]: name === "budget" || name === "min_seats" || name === "daily_distance"
-        ? Number(value)
-        : value,
+      [name]:
+        name === "budget" || name === "min_seats" || name === "daily_distance"
+          ? Number(value)
+          : value,
     });
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
+    setSelectedCars([]);
 
     try {
       const response = await axios.post(`${API_BASE_URL}/recommend`, formData);
@@ -41,6 +44,26 @@ function App() {
     }
 
     setLoading(false);
+  }
+
+  function toggleCarSelection(car) {
+    const alreadySelected = selectedCars.find(
+      (selected) => selected.id === car.id
+    );
+
+    if (alreadySelected) {
+      setSelectedCars(
+        selectedCars.filter((selected) => selected.id !== car.id)
+      );
+      return;
+    }
+
+    if (selectedCars.length >= 3) {
+      alert("You can compare up to 3 cars at once.");
+      return;
+    }
+
+    setSelectedCars([...selectedCars, car]);
   }
 
   return (
@@ -132,49 +155,177 @@ function App() {
               />
             </label>
 
-            <button type="submit">
+            <button type="submit" className="main-button">
               {loading ? "Finding cars..." : "Find My Car"}
             </button>
           </form>
         </section>
 
         <section className="results">
-          {recommendations.map((item) => (
-            <div key={item.car.id} className="car-card">
-              <div className="car-header">
-                <h2>
-                  {item.car.brand} {item.car.model} {item.car.year}
-                </h2>
-                <span className="score">{item.score}% match</span>
+          {recommendations.map((item) => {
+            const isSelected = selectedCars.find(
+              (selected) => selected.id === item.car.id
+            );
+
+            return (
+              <div key={item.car.id} className="car-card">
+                <div className="car-header">
+                  <div>
+                    <h2>
+                      {item.car.brand} {item.car.model} {item.car.year}
+                    </h2>
+                    <p>{item.car.description}</p>
+                  </div>
+
+                  <span className="score">{item.score}% match</span>
+                </div>
+
+                <div className="car-details">
+                  <span>Price: {item.car.price}</span>
+                  <span>Fuel: {item.car.fuel_type}</span>
+                  <span>Body: {item.car.body_type}</span>
+                  <span>Seats: {item.car.seats}</span>
+                  <span>Range: {item.car.range_km} km</span>
+                  <span>HP: {item.car.horsepower}</span>
+                </div>
+
+                <h3>Why it matches you</h3>
+                <ul>
+                  {item.reasons.map((reason, index) => (
+                    <li key={index}>{reason}</li>
+                  ))}
+                </ul>
+
+                <h3>Possible weaknesses</h3>
+                <ul>
+                  {item.weaknesses.length > 0 ? (
+                    item.weaknesses.map((weakness, index) => (
+                      <li key={index}>{weakness}</li>
+                    ))
+                  ) : (
+                    <li>No major weaknesses based on your selected preferences.</li>
+                  )}
+                </ul>
+
+                <button
+                  type="button"
+                  className={isSelected ? "compare-button selected" : "compare-button"}
+                  onClick={() => toggleCarSelection(item.car)}
+                >
+                  {isSelected ? "Remove from Compare" : "Add to Compare"}
+                </button>
               </div>
-
-              <p>{item.car.description}</p>
-
-              <div className="car-details">
-                <span>Price: {item.car.price}</span>
-                <span>Fuel: {item.car.fuel_type}</span>
-                <span>Body: {item.car.body_type}</span>
-                <span>Seats: {item.car.seats}</span>
-                <span>Range: {item.car.range_km} km</span>
-                <span>HP: {item.car.horsepower}</span>
-              </div>
-
-              <h3>Why it matches you</h3>
-              <ul>
-                {item.reasons.map((reason, index) => (
-                  <li key={index}>{reason}</li>
-                ))}
-              </ul>
-
-              <h3>Possible weaknesses</h3>
-              <ul>
-                {item.weaknesses.map((weakness, index) => (
-                  <li key={index}>{weakness}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
+            );
+          })}
         </section>
+
+        {selectedCars.length > 0 && (
+          <section className="card">
+            <h2>Car Comparison</h2>
+            <p>Compare up to 3 selected cars side by side.</p>
+
+            <div className="comparison-table-wrapper">
+              <table className="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    {selectedCars.map((car) => (
+                      <th key={car.id}>
+                        {car.brand} {car.model}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr>
+                    <td>Price</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.price}</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Fuel Type</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.fuel_type}</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Body Type</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.body_type}</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Seats</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.seats}</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Range</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.range_km} km</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Horsepower</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.horsepower} hp</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Safety</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.safety_score}/100</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Reliability</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.reliability_score}/100</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Comfort</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.comfort_score}/100</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Performance</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.performance_score}/100</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Technology</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.tech_score}/100</td>
+                    ))}
+                  </tr>
+
+                  <tr>
+                    <td>Maintenance Cost</td>
+                    {selectedCars.map((car) => (
+                      <td key={car.id}>{car.maintenance_cost_score}/100</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
